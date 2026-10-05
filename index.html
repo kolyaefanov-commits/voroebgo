@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoroebGO</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+  :root {
+    --black: #0F0F0F;
+    --black-2: #1A1A1A;
+    --black-3: #242424;
+    --pink: #FF2E88;
+    --pink-dark: #C4196A;
+    --yellow: #FFE066;
+    --blue: #5EC8F5;
+    --green: #6BD968;
+    --red: #FF5252;
+    --white: #FFFFFF;
+    --gray: #B0B0B0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Press Start 2P', monospace;
+    color: var(--white);
+    background: var(--black);
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.6;
+  }
+
+  /* ============== ШАПКА ============== */
+  .hero {
+    background: var(--black);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    z-index: 1001;
+    position: relative;
+    border-bottom: 4px solid var(--pink);
+  }
+  .hero h1 {
+    font-size: 1.6rem;
+    color: var(--pink);
+    text-shadow: 3px 3px 0 var(--white), -1px -1px 0 var(--black);
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+  .hero .subtitle {
+    color: var(--gray);
+    font-size: 0.6rem;
+    margin: 0;
+    flex: 1;
+    text-align: left;
+  }
+  .user-info {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .user-info span { color: var(--yellow); font-size: 0.7rem; }
+
+  /* ============== КНОПКИ ============== */
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    padding: 10px 16px;
+    border: 3px solid var(--white);
+    background: var(--black);
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn:hover {
+    background: var(--white);
+    color: var(--black);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--pink);
+  }
+  .btn-primary { background: var(--yellow); color: var(--black); }
+  .btn-primary:hover { background: var(--pink); color: var(--white); box-shadow: 4px 4px 0 var(--yellow); }
+  .btn-pink { background: var(--pink); color: var(--white); }
+  .btn-pink:hover { background: var(--white); color: var(--pink); box-shadow: 4px 4px 0 var(--pink); }
+  .btn-blue { background: var(--blue); color: var(--black); }
+  .btn-blue:hover { background: var(--white); color: var(--black); box-shadow: 4px 4px 0 var(--blue); }
+  .btn-danger { background: var(--pink-dark); color: var(--white); }
+  .btn-danger:hover { background: var(--pink); color: var(--white); box-shadow: 4px 4px 0 var(--yellow); }
+
+  /* Кнопка музыки */
+  .music-btn {
+    background: var(--black);
+    color: var(--yellow);
+    border: 3px solid var(--yellow);
+    padding: 8px 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .music-btn:hover {
+    background: var(--yellow);
+    color: var(--black);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--pink);
+  }
+  .music-btn.muted { color: var(--gray); border-color: var(--gray); }
+
+  /* ============== КАРТА ============== */
+  #map {
+    position: absolute;
+    top: 62px; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    z-index: 1;
+    filter: contrast(1.05) saturate(1.1);
+  }
+
+  /* ============== ПАНЕЛЬ АДМИНА ============== */
+  #adminPanel {
+    position: fixed; right: 20px; bottom: 20px;
+    background: var(--black);
+    padding: 16px;
+    border: 4px solid var(--yellow);
+    box-shadow: 8px 8px 0 var(--pink);
+    display: none; z-index: 900;
+    width: 280px;
+  }
+  #adminPanel.active { display: block; }
+  #adminPanel h3 {
+    color: var(--yellow);
+    margin: 0 0 14px 0;
+    font-size: 0.8rem;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  #adminPanel .btn { width: 100%; margin-bottom: 8px; }
+
+  /* ============== МОДАЛКИ ============== */
+  .modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+    padding: 20px;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: var(--black);
+    padding: 26px;
+    border: 4px solid var(--white);
+    box-shadow: 8px 8px 0 var(--pink);
+    max-width: 540px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-content h2 {
+    color: var(--yellow);
+    margin: 0 0 20px 0;
+    font-size: 1rem;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 3px 3px 0 var(--pink);
+  }
+  .modal-content label {
+    display: block;
+    margin: 14px 0 6px;
+    font-size: 0.65rem;
+    color: var(--blue);
+    letter-spacing: 1px;
+  }
+  .modal-content input, .modal-content select {
+    width: 100%;
+    padding: 12px;
+    border: 3px solid var(--white);
+    background: var(--black-2);
+    color: var(--white);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    outline: none;
+  }
+  .modal-content input:focus, .modal-content select:focus {
+    border-color: var(--pink);
+    box-shadow: 0 0 0 2px var(--pink);
+  }
+  .modal-content select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='white' stroke-width='2'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  .modal-content .row {
+    display: flex; gap: 10px; margin-top: 20px;
+  }
+  .modal-content .row .btn { flex: 1; padding: 12px; }
+
+  /* ============== КОЛЛЕКЦИЯ ============== */
+  .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .poke-card {
+    background: var(--black-2);
+    padding: 10px;
+    text-align: center;
+    border: 3px solid var(--blue);
+    transition: all 0.15s;
+    cursor: pointer;
+    position: relative;
+  }
+  .poke-card:hover {
+    border-color: var(--pink);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--pink);
+  }
+  .poke-card img {
+    width: 72px; height: 72px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .poke-card .poke-name {
+    font-size: 0.55rem;
+    margin-top: 8px;
+    color: var(--white);
+    letter-spacing: 0.5px;
+  }
+  .poke-card .poke-cp {
+    font-size: 0.5rem;
+    color: var(--yellow);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .poke-card .poke-stars {
+    font-size: 0.55rem;
+    color: var(--yellow);
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+
+  #qrReader { width: 100%; margin-top: 10px; border: 3px solid var(--blue); }
+
+  .hint {
+    font-size: 0.6rem;
+    color: var(--gray);
+    margin-top: 10px;
+    text-align: center;
+    line-height: 1.8;
+  }
+  .error {
+    color: var(--pink);
+    font-size: 0.65rem;
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  /* ============== СПИСКИ (админ) ============== */
+  .user-item, .poke-item {
+    background: var(--black-2);
+    padding: 12px 16px;
+    margin: 8px 0;
+    border: 3px solid var(--white);
+    transition: all 0.15s;
+  }
+  .user-item { cursor: pointer; }
+  .user-item:hover { border-color: var(--pink); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--pink); }
+
+  .poke-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .poke-item-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .poke-item-info img {
+    width: 40px; height: 40px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .poke-item-info b { font-size: 0.65rem; color: var(--yellow); }
+  .poke-item-info small { font-size: 0.55rem; color: var(--gray); display: block; margin-top: 4px; }
+
+  /* ============== МАРКЕРЫ ============== */
+  .poke-marker {
+    background: var(--black);
+    width: 52px; height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--yellow);
+    box-shadow: 3px 3px 0 var(--pink);
+    overflow: hidden;
+    image-rendering: pixelated;
+  }
+  .poke-marker img {
+    width: 42px; height: 42px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .leaflet-popup-content-wrapper {
+    background: var(--black) !important;
+    color: var(--white) !important;
+    border: 3px solid var(--yellow) !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 var(--pink) !important;
+  }
+  .leaflet-popup-tip { background: var(--yellow) !important; }
+  .leaflet-popup-content {
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    margin: 10px !important;
+  }
+  .leaflet-popup-content img {
+    max-width: 80px;
+    display: block;
+    margin: 0 auto 8px;
+    image-rendering: pixelated;
+  }
+  .leaflet-popup-close-button {
+    color: var(--pink) !important;
+    font-size: 18px !important;
+  }
+
+  /* Скроллбар */
+  .modal-content::-webkit-scrollbar { width: 8px; }
+  .modal-content::-webkit-scrollbar-track { background: var(--black-2); }
+  .modal-content::-webkit-scrollbar-thumb { background: var(--pink); }
+
+  /* =========================================================
+     ПРОФИЛЬ ПОКЕМОНА
+     ========================================================= */
+  .profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 3px dashed var(--pink);
+  }
+  .profile-sprite {
+    width: 140px; height: 140px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: pointer;
+    border: 3px solid var(--yellow);
+    background: var(--black-2);
+    padding: 10px;
+    transition: transform 0.2s;
+  }
+  .profile-sprite:hover { transform: scale(1.05); border-color: var(--pink); }
+  .profile-name {
+    font-size: 1rem;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    text-align: center;
+  }
+  .profile-hint { font-size: 0.5rem; color: var(--gray); }
+
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0;
+    padding: 10px;
+    background: var(--black-2);
+    border: 2px solid var(--black-3);
+  }
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--blue);
+    width: 60px;
+    letter-spacing: 1px;
+  }
+  .stat-bar-wrap {
+    flex: 1;
+    height: 20px;
+    background: var(--black-3);
+    border: 2px solid var(--white);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-bar {
+    height: 100%;
+    transition: width 0.5s ease;
+    background-image: linear-gradient(90deg, var(--green) 0%, var(--yellow) 50%, var(--pink) 100%);
+    background-size: 200% 100%;
+  }
+  .stat-value {
+    font-size: 0.6rem;
+    color: var(--white);
+    width: 50px;
+    text-align: right;
+  }
+  .stat-stars {
+    font-size: 0.7rem;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    width: 60px;
+    text-align: left;
+  }
+
+  .star-filled { color: var(--yellow); }
+  .star-empty { color: var(--black-3); }
+
+  /* =========================================================
+     БОЛЬШОЙ СПРАЙТ
+     ========================================================= */
+  #bigSpriteModal .modal-content {
+    max-width: 420px;
+    text-align: center;
+  }
+  #bigSpriteModal img {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: var(--black-2);
+    border: 3px solid var(--yellow);
+    padding: 16px;
+  }
+
+  /* =========================================================
+     АНИМАЦИЯ ПОИМКИ
+     ========================================================= */
+  #catchOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    overflow: hidden;
+  }
+  #catchOverlay.active { display: flex; }
+
+  .catch-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    z-index: 2;
+  }
+
+  .catch-sprite {
+    width: 200px;
+    height: 200px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    animation: catchPop 1.4s ease-out forwards;
+    filter: drop-shadow(0 0 20px var(--yellow));
+  }
+
+  @keyframes catchPop {
+    0%   { transform: scale(0.2) translateY(60px); opacity: 0; }
+    25%  { transform: scale(1.3) translateY(-10px); opacity: 1; }
+    45%  { transform: scale(1.1) translateY(0); }
+    60%  { transform: scale(1.2) translateY(-20px); }
+    75%  { transform: scale(1.1) translateY(0); }
+    90%  { transform: scale(1.15) translateY(-10px); }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .catch-title {
+    font-size: 1.1rem;
+    color: var(--yellow);
+    letter-spacing: 3px;
+    text-shadow: 3px 3px 0 var(--pink);
+    animation: catchTitleIn 0.6s 0.3s ease-out backwards;
+    text-align: center;
+  }
+  @keyframes catchTitleIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .catch-subtitle {
+    font-size: 0.65rem;
+    color: var(--white);
+    letter-spacing: 2px;
+    opacity: 0;
+    animation: catchTitleIn 0.6s 1s ease-out forwards;
+  }
+
+  .firework-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    pointer-events: none;
+    z-index: 3;
+    animation: particleFly 1.2s ease-out forwards;
+  }
+  @keyframes particleFly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+  }
+
+  .flash {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: radial-gradient(circle, white, transparent 70%);
+    pointer-events: none;
+    z-index: 2;
+    animation: flashExpand 0.6s ease-out forwards;
+  }
+  @keyframes flashExpand {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(15); opacity: 0; }
+  }
+
+  #catchOverlay.fade-out .catch-stage {
+    animation: stageOut 0.5s ease-in forwards;
+  }
+  @keyframes stageOut {
+    to { transform: scale(1.5); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>VoroebGO</h1>
+  <p class="subtitle">ТВОЙ ПИКСЕЛЬНЫЙ ПИТОМЕЦ · ЛОВИ QR-КОДЫ В МОСКВЕ</p>
+  <button id="musicBtn" class="music-btn" title="Музыка">🔊</button>
+  <div class="user-info" id="userInfo"></div>
+</header>
+
+<div id="map"></div>
+
+<!-- Панель админа -->
+<div id="adminPanel">
+  <h3>👑 АДМИН</h3>
+  <button id="addPokeBtn" class="btn btn-primary">+ Добавить</button>
+  <button id="deletePokeBtn" class="btn btn-danger">🗑 Удалить</button>
+  <button id="viewUsersBtn" class="btn btn-pink">👥 Игроки</button>
+  <p class="hint">Клик по карте → координаты в форму</p>
+</div>
+
+<!-- Модалка: вход/регистрация -->
+<div class="modal" id="authModal">
+  <div class="modal-content">
+    <h2>► PRESS START</h2>
+    <label>ЛОГИН</label>
+    <input id="authLogin" type="text" autocomplete="username">
+    <label>ПАРОЛЬ</label>
+    <input id="authPass" type="password" autocomplete="current-password">
+    <div class="row">
+      <button id="loginBtn" class="btn btn-primary">ВОЙТИ</button>
+      <button id="registerBtn" class="btn btn-blue">НОВЫЙ</button>
+    </div>
+    <p class="error" id="authError"></p>
+  </div>
+</div>
+
+<!-- Модалка: коллекция -->
+<div class="modal" id="collectionModal">
+  <div class="modal-content">
+    <h2>🎒 КОЛЛЕКЦИЯ</h2>
+    <div id="collectionContent"></div>
+    <div class="row">
+      <button onclick="document.getElementById('collectionModal').classList.remove('active')" class="btn btn-pink">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: профиль покемона -->
+<div class="modal" id="profileModal">
+  <div class="modal-content">
+    <h2>📊 ПРОФИЛЬ</h2>
+    <div id="profileContent"></div>
+    <div class="row">
+      <button onclick="document.getElementById('profileModal').classList.remove('active')" class="btn btn-pink">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: большой спрайт -->
+<div class="modal" id="bigSpriteModal">
+  <div class="modal-content">
+    <h2 id="bigSpriteTitle">POKEMON</h2>
+    <img id="bigSpriteImg" src="" alt="">
+    <div class="row">
+      <button onclick="document.getElementById('bigSpriteModal').classList.remove('active')" class="btn btn-pink">НАЗАД</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: сканер -->
+<div class="modal" id="scannerModal">
+  <div class="modal-content">
+    <h2>📷 СКАНЕР</h2>
+    <div id="qrReader"></div>
+    <p class="hint">НАВЕДИ КАМЕРУ НА QR-КОД НАКЛЕЙКИ</p>
+    <div class="row">
+      <button id="closeScanner" class="btn btn-pink">ОТМЕНА</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: добавление покемона (админ) -->
+<div class="modal" id="addPokeModal">
+  <div class="modal-content">
+    <h2>+ ДОБАВИТЬ</h2>
+    <label>ИЗ БИБЛИОТЕКИ (151)</label>
+    <select id="pokeSelect">
+      <option value="">— ВЫБЕРИ —</option>
+    </select>
+    <label>ИЛИ ВВЕДИ ИМЯ ВРУЧНУЮ</label>
+    <input id="pokeName" type="text" placeholder="Pikachu">
+    <label>КАРТИНКА (URL)</label>
+    <input id="pokeImg" type="text" placeholder="https://...">
+    <label>ШИРОТА (LAT)</label>
+    <input id="pokeLat" type="text" placeholder="55.7558">
+    <label>ДОЛГОТА (LNG)</label>
+    <input id="pokeLng" type="text" placeholder="37.6173">
+    <div class="row">
+      <button id="savePoke" class="btn btn-primary">СОХРАНИТЬ</button>
+      <button onclick="document.getElementById('addPokeModal').classList.remove('active')" class="btn btn-pink">ОТМЕНА</button>
+    </div>
+    <p class="error" id="pokeError"></p>
+  </div>
+</div>
+
+<!-- Модалка: удаление покемона (админ) -->
+<div class="modal" id="deletePokeModal">
+  <div class="modal-content">
+    <h2>🗑 УДАЛИТЬ</h2>
+    <p class="hint" style="margin-bottom:16px;">ВЫБЕРИ ПОКЕМОНА, ЧТОБЫ УБРАТЬ ЕГО С КАРТЫ</p>
+    <div id="deletePokeList"></div>
+    <div class="row">
+      <button onclick="document.getElementById('deletePokeModal').classList.remove('active')" class="btn btn-pink">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: пользователи (админ) -->
+<div class="modal" id="usersModal">
+  <div class="modal-content">
+    <h2>👥 ИГРОКИ</h2>
+    <div id="usersList"></div>
+    <div class="row">
+      <button onclick="document.getElementById('usersModal').classList.remove('active')" class="btn btn-pink">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Оверлей анимации поимки -->
+<div id="catchOverlay">
+  <div class="catch-stage">
+    <img id="catchSprite" class="catch-sprite" src="" alt="">
+    <div class="catch-title" id="catchTitle">ПОЙМАН!</div>
+    <div class="catch-subtitle" id="catchSubtitle">+1 В КОЛЛЕКЦИЮ</div>
+  </div>
+</div>
+
+<!-- Фоновая музыка -->
+<audio id="bgMusic" loop preload="auto" src="1-04. Aspertia City.mp3"></audio>
+
+<script>
+/* =========================================================
+   БИБЛИОТЕКА ПОКЕМОНОВ 1-го ПОКОЛЕНИЯ (151)
+   ========================================================= */
+const POKEDEX = [
+  "Bulbasaur","Ivysaur","Venusaur","Charmander","Charmeleon","Charizard","Squirtle","Wartortle","Blastoise",
+  "Caterpie","Metapod","Butterfree","Weedle","Kakuna","Beedrill","Pidgey","Pidgeotto","Pidgeot",
+  "Rattata","Raticate","Spearow","Fearow","Ekans","Arbok","Pikachu","Raichu","Sandshrew","Sandslash",
+  "Nidoran♀","Nidorina","Nidoqueen","Nidoran♂","Nidorino","Nidoking","Clefairy","Clefable","Vulpix","Ninetales",
+  "Jigglypuff","Wigglytuff","Zubat","Golbat","Oddish","Gloom","Vileplume","Paras","Parasect","Venonat","Venomoth",
+  "Diglett","Dugtrio","Meowth","Persian","Psyduck","Golduck","Mankey","Primeape","Growlithe","Arcanine",
+  "Poliwag","Poliwhirl","Poliwrath","Abra","Kadabra","Alakazam","Machop","Machoke","Machamp",
+  "Bellsprout","Weepinbell","Victreebel","Tentacool","Tentacruel","Geodude","Graveler","Golem","Ponyta","Rapidash",
+  "Slowpoke","Slowbro","Magnemite","Magneton","Farfetch'd","Doduo","Dodrio","Seel","Dewgong",
+  "Grimer","Muk","Shellder","Cloyster","Gastly","Haunter","Gengar","Onix","Drowzee","Hypno",
+  "Krabby","Kingler","Voltorb","Electrode","Exeggcute","Exeggutor","Cubone","Marowak","Hitmonlee","Hitmonchan",
+  "Lickitung","Koffing","Weezing","Rhyhorn","Rhydon","Chansey","Tangela","Kangaskhan","Horsea","Seadra",
+  "Goldeen","Seaking","Staryu","Starmie","Mr. Mime","Scyther","Jynx","Electabuzz","Magmar","Pinsir",
+  "Tauros","Magikarp","Gyarados","Lapras","Ditto","Eevee","Vaporeon","Jolteon","Flareon",
+  "Porygon","Omanyte","Omastar","Kabuto","Kabutops","Aerodactyl","Snorlax","Articuno","Zapdos","Moltres",
+  "Dratini","Dragonair","Dragonite","Mewtwo","Mew"
+];
+
+function pokedexToId(name) {
+  if (name === "Nidoran♀") return 29;
+  if (name === "Nidoran♂") return 32;
+  const idx = POKEDEX.indexOf(name);
+  return idx >= 0 ? idx + 1 : null;
+}
+function getSpriteUrl(name) {
+  const id = pokedexToId(name);
+  return id ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png` : '';
+}
+
+/* =========================================================
+   ГЕНЕРАЦИЯ ХАРАКТЕРИСТИК
+   ========================================================= */
+function rollStat(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function starsFromPercent(percent) {
+  if (percent >= 90) return 5;
+  if (percent >= 75) return 4;
+  if (percent >= 55) return 3;
+  if (percent >= 35) return 2;
+  if (percent >= 15) return 1;
+  return 0;
+}
+
+function generateStats() {
+  const cp  = rollStat(10, 1500);
+  const hp  = rollStat(10, 200);
+  const atk = rollStat(5, 150);
+  return {
+    cp:  { value: cp,  stars: starsFromPercent((cp - 10) / (1500 - 10) * 100) },
+    hp:  { value: hp,  stars: starsFromPercent((hp - 10) / (200 - 10) * 100) },
+    atk: { value: atk, stars: starsFromPercent((atk - 5) / (150 - 5) * 100) }
+  };
+}
+
+/* =========================================================
+   ХРАНИЛИЩЕ
+   ========================================================= */
+const DB = {
+  get(key, def) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? def; }
+    catch { return def; }
+  },
+  set(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+};
+
+if (!DB.get('users', null)) {
+  DB.set('users', [{ login: 'admin', password: 'admin', isAdmin: true, collection: [], caught: [] }]);
+}
+if (!DB.get('pokemons', null)) {
+  DB.set('pokemons', [
+    { id: 'p1', name: 'Pikachu', img: getSpriteUrl('Pikachu'), lat: 55.7558, lng: 37.6173 },
+    { id: 'p2', name: 'Bulbasaur', img: getSpriteUrl('Bulbasaur'), lat: 55.7600, lng: 37.6300 },
+    { id: 'p3', name: 'Charmander', img: getSpriteUrl('Charmander'), lat: 55.7480, lng: 37.6050 }
+  ]);
+}
+
+// Миграция старых пользователей
+(function migrate() {
+  const users = DB.get('users', []);
+  const pokemons = DB.get('pokemons', []);
+  let changed = false;
+  users.forEach(u => {
+    if (!u.collection) { u.collection = []; changed = true; }
+    if (!u.caught) { u.caught = []; changed = true; }
+    u.collection = u.collection.map(item => {
+      if (typeof item === 'string') {
+        changed = true;
+        const p = pokemons.find(x => x.name === item);
+        if (p) u.caught.push(p.id);
+        return { name: item, id: p ? p.id : null, stats: generateStats() };
+      }
+      return item;
+    });
+  });
+  if (changed) DB.set('users', users);
+})();
+
+let currentUser = DB.get('currentUser', null);
+
+function getUser(login) { return DB.get('users', []).find(u => u.login === login); }
+function saveUser(user) {
+  const users = DB.get('users', []);
+  const idx = users.findIndex(u => u.login === user.login);
+  if (idx >= 0) users[idx] = user; else users.push(user);
+  DB.set('users', users);
+}
+
+/* =========================================================
+   КАРТА — OpenTopoMap
+   ========================================================= */
+const map = L.map('map').setView([55.7558, 37.6173], 12);
+
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  subdomains: 'abc',
+  attribution: '© OpenStreetMap, SRTM | © OpenTopoMap'
+}).addTo(map);
+
+const markers = {};
+
+function renderPokemons() {
+  const pokemons = DB.get('pokemons', []);
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  for (const k in markers) delete markers[k];
+
+  const caughtIds = currentUser ? (getUser(currentUser.login)?.caught || []) : [];
+
+  for (const p of pokemons) {
+    if (caughtIds.includes(p.id)) continue;
+
+    const icon = L.divIcon({
+      html: `<div class="poke-marker"><img src="${p.img}" alt="${p.name}"></div>`,
+      className: '',
+      iconSize: [52, 52],
+      iconAnchor: [26, 26]
+    });
+    const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+    marker.bindPopup(`
+      <img src="${p.img}" alt="${p.name}">
+      <b>${p.name}</b><br>
+      <small>QR: ${p.name}</small>
+    `);
+    markers[p.id] = marker;
+  }
+}
+
+/* =========================================================
+   UI
+   ========================================================= */
+function updateHeader() {
+  const el = document.getElementById('userInfo');
+  el.innerHTML = '';
+  if (!currentUser) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary';
+    btn.textContent = '► ВОЙТИ';
+    btn.onclick = () => openAuth();
+    el.appendChild(btn);
+  } else {
+    const user = getUser(currentUser.login);
+    const span = document.createElement('span');
+    span.textContent = `👤 ${user.login.toUpperCase()}${user.isAdmin ? ' 👑' : ''}`;
+    el.appendChild(span);
+
+    const colBtn = document.createElement('button');
+    colBtn.className = 'btn btn-primary';
+    colBtn.textContent = '🎒 КОЛЛЕКЦИЯ';
+    colBtn.onclick = openCollection;
+    el.appendChild(colBtn);
+
+    const scanBtn = document.createElement('button');
+    scanBtn.className = 'btn btn-pink';
+    scanBtn.textContent = '📷 СКАН';
+    scanBtn.onclick = openScanner;
+    el.appendChild(scanBtn);
+
+    const outBtn = document.createElement('button');
+    outBtn.className = 'btn';
+    outBtn.textContent = 'ВЫЙТИ';
+    outBtn.onclick = logout;
+    el.appendChild(outBtn);
+
+    document.getElementById('adminPanel').classList.toggle('active', !!user.isAdmin);
+  }
+  renderPokemons();
+}
+
+function openAuth() {
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authModal').classList.add('active');
+}
+
+document.getElementById('loginBtn').onclick = () => {
+  const login = document.getElementById('authLogin').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const user = getUser(login);
+  if (!user || user.password !== pass) {
+    document.getElementById('authError').textContent = '✗ НЕВЕРНЫЙ ЛОГИН ИЛИ ПАРОЛЬ';
+    return;
+  }
+  currentUser = { login };
+  DB.set('currentUser', currentUser);
+  document.getElementById('authModal').classList.remove('active');
+  updateHeader();
+};
+
+document.getElementById('registerBtn').onclick = () => {
+  const login = document.getElementById('authLogin').value.trim();
+  const pass = document.getElementById('authPass').value;
+  if (!login || !pass) {
+    document.getElementById('authError').textContent = '✗ ЗАПОЛНИ ВСЕ ПОЛЯ';
+    return;
+  }
+  if (getUser(login)) {
+    document.getElementById('authError').textContent = '✗ ЛОГИН ЗАНЯТ';
+    return;
+  }
+  saveUser({ login, password: pass, isAdmin: false, collection: [], caught: [] });
+  currentUser = { login };
+  DB.set('currentUser', currentUser);
+  document.getElementById('authModal').classList.remove('active');
+  updateHeader();
+};
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('currentUser');
+  updateHeader();
+}
+
+/* =========================================================
+   КОЛЛЕКЦИЯ
+   ========================================================= */
+function openCollection() {
+  const user = getUser(currentUser.login);
+  const content = document.getElementById('collectionContent');
+
+  if (!user.collection.length) {
+    content.innerHTML = '<p class="hint">ПУСТО. СКАНИРУЙ QR-КОДЫ, ЧТОБЫ ЛОВИТЬ!</p>';
+    document.getElementById('collectionModal').classList.add('active');
+    return;
+  }
+
+  content.innerHTML = '<div class="collection-grid">' +
+    user.collection.map((item, idx) => {
+      const img = getSpriteUrl(item.name);
+      const cp = item.stats?.cp?.value ?? 0;
+      const starsTotal = (item.stats?.cp?.stars || 0) + (item.stats?.hp?.stars || 0) + (item.stats?.atk?.stars || 0);
+      const avgStars = Math.round(starsTotal / 3);
+      const starStr = '★'.repeat(avgStars) + '☆'.repeat(5 - avgStars);
+      return `
+        <div class="poke-card" onclick="openProfile(${idx})">
+          <img src="${img}" alt="${item.name}">
+          <div class="poke-name">${item.name.toUpperCase()}</div>
+          <div class="poke-cp">CP ${cp}</div>
+          <div class="poke-stars">${starStr}</div>
+        </div>`;
+    }).join('') +
+    '</div>';
+
+  document.getElementById('collectionModal').classList.add('active');
+}
+
+/* =========================================================
+   ПРОФИЛЬ
+   ========================================================= */
+function starsHtml(n) {
+  let s = '';
+  for (let i = 0; i < 5; i++) {
+    s += i < n
+      ? '<span class="star-filled">★</span>'
+      : '<span class="star-empty">★</span>';
+  }
+  return s;
+}
+
+function statRow(label, stat, max) {
+  const pct = Math.min(100, Math.round((stat.value / max) * 100));
+  return `
+    <div class="stat-row">
+      <div class="stat-label">${label}</div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%"></div></div>
+      <div class="stat-value">${stat.value}</div>
+      <div class="stat-stars">${starsHtml(stat.stars)}</div>
+    </div>
+  `;
+}
+
+window.openProfile = function(index) {
+  const user = getUser(currentUser.login);
+  const item = user.collection[index];
+  if (!item) return;
+
+  const img = getSpriteUrl(item.name);
+  const stats = item.stats || generateStats();
+
+  const totalStars = stats.cp.stars + stats.hp.stars + stats.atk.stars;
+  let rarity = 'ОБЫЧНЫЙ';
+  let rarityColor = 'var(--gray)';
+  if (totalStars >= 13) { rarity = 'ЛЕГЕНДАРНЫЙ'; rarityColor = 'var(--pink)'; }
+  else if (totalStars >= 10) { rarity = 'ЭПИЧЕСКИЙ'; rarityColor = 'var(--yellow)'; }
+  else if (totalStars >= 7) { rarity = 'РЕДКИЙ'; rarityColor = 'var(--blue)'; }
+  else if (totalStars >= 4) { rarity = 'НЕОБЫЧНЫЙ'; rarityColor = 'var(--green)'; }
+
+  document.getElementById('profileContent').innerHTML = `
+    <div class="profile-header">
+      <img class="profile-sprite" src="${img}" alt="${item.name}"
+           onclick="openBigSprite('${item.name}')">
+      <div class="profile-name">${item.name.toUpperCase()}</div>
+      <div class="profile-hint">НАЖМИ НА СПРАЙТ, ЧТОБЫ УВЕЛИЧИТЬ</div>
+      <div style="font-size:0.65rem;color:${rarityColor};letter-spacing:1px;margin-top:6px;">${rarity}</div>
+    </div>
+    ${statRow('CP',  stats.cp,  1500)}
+    ${statRow('HP',  stats.hp,  200)}
+    ${statRow('ATK', stats.atk, 150)}
+    <p class="hint" style="margin-top:16px;">ЗВЁЗДЫ ПОКАЗЫВАЮТ УРОВЕНЬ ПРОКАЧКИ ХАРАКТЕРИСТИКИ</p>
+  `;
+
+  document.getElementById('collectionModal').classList.remove('active');
+  document.getElementById('profileModal').classList.add('active');
+};
+
+/* =========================================================
+   БОЛЬШОЙ СПРАЙТ
+   ========================================================= */
+window.openBigSprite = function(name) {
+  const img = getSpriteUrl(name);
+  document.getElementById('bigSpriteTitle').textContent = name.toUpperCase();
+  document.getElementById('bigSpriteImg').src = img;
+  document.getElementById('bigSpriteModal').classList.add('active');
+};
+
+/* =========================================================
+   QR-СКАНЕР
+   ========================================================= */
+let html5Qr = null;
+
+function openScanner() {
+  document.getElementById('scannerModal').classList.add('active');
+  html5Qr = new Html5Qrcode("qrReader");
+  html5Qr.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess,
+    () => {}
+  ).catch(err => {
+    alert('Не удалось открыть камеру: ' + err);
+    closeScanner();
+  });
+}
+
+function closeScanner() {
+  if (html5Qr) {
+    html5Qr.stop().then(() => html5Qr.clear()).catch(()=>{});
+    html5Qr = null;
+  }
+  document.getElementById('scannerModal').classList.remove('active');
+}
+
+document.getElementById('closeScanner').onclick = closeScanner;
+
+function onScanSuccess(decodedText) {
+  const name = decodedText.trim();
+  const pokemons = DB.get('pokemons', []);
+  const poke = pokemons.find(p => p.name.toLowerCase() === name.toLowerCase());
+
+  if (!poke) {
+    alert('✗ НЕ НАЙДЕН НА КАРТЕ: ' + name);
+    return;
+  }
+
+  const user = getUser(currentUser.login);
+  if (!user.collection) user.collection = [];
+  if (!user.caught) user.caught = [];
+
+  if (user.caught.includes(poke.id)) {
+    alert(`У ТЕБЯ УЖЕ ЕСТЬ ${poke.name.toUpperCase()}!`);
+    closeScanner();
+    return;
+  }
+
+  const stats = generateStats();
+  user.collection.push({ name: poke.name, id: poke.id, stats });
+  user.caught.push(poke.id);
+  saveUser(user);
+
+  closeScanner();
+
+  showCatchAnimation(poke, () => {
+    updateHeader();
+    renderPokemons();
+  });
+}
+
+/* =========================================================
+   АНИМАЦИЯ ПОИМКИ
+   ========================================================= */
+function showCatchAnimation(poke, onDone) {
+  const overlay = document.getElementById('catchOverlay');
+  const sprite = document.getElementById('catchSprite');
+  const title = document.getElementById('catchTitle');
+  const subtitle = document.getElementById('catchSubtitle');
+
+  sprite.src = poke.img;
+  title.textContent = `ПОЙМАН ${poke.name.toUpperCase()}!`;
+  subtitle.textContent = '+1 В КОЛЛЕКЦИЮ';
+
+  sprite.style.animation = 'none';
+  title.style.animation = 'none';
+  subtitle.style.animation = 'none';
+  void sprite.offsetWidth;
+  sprite.style.animation = '';
+  title.style.animation = '';
+  subtitle.style.animation = '';
+
+  overlay.classList.add('active');
+  overlay.classList.remove('fade-out');
+
+  setTimeout(() => launchFirework(overlay), 400);
+  setTimeout(() => launchFirework(overlay), 700);
+  setTimeout(() => launchFirework(overlay), 1000);
+
+  setTimeout(() => { overlay.classList.add('fade-out'); }, 2200);
+
+  setTimeout(() => {
+    overlay.classList.remove('active', 'fade-out');
+    overlay.querySelectorAll('.firework-particle, .flash').forEach(el => el.remove());
+    if (onDone) onDone();
+  }, 2700);
+}
+
+function launchFirework(container) {
+  const stage = container.querySelector('.catch-stage');
+  const rect = stage.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  const flash = document.createElement('div');
+  flash.className = 'flash';
+  flash.style.left = (centerX - 10) + 'px';
+  flash.style.top = (centerY - 10) + 'px';
+  flash.style.position = 'fixed';
+  container.appendChild(flash);
+  setTimeout(() => flash.remove(), 700);
+
+  const colors = ['#FF2E88', '#FFE066', '#5EC8F5', '#6BD968', '#FFFFFF'];
+  const count = 24;
+
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+    const distance = 120 + Math.random() * 180;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
+
+    const p = document.createElement('div');
+    p.className = 'firework-particle';
+    p.style.left = centerX + 'px';
+    p.style.top = centerY + 'px';
+    p.style.position = 'fixed';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.setProperty('--dx', dx + 'px');
+    p.style.setProperty('--dy', dy + 'px');
+    p.style.boxShadow = `0 0 8px ${p.style.background}`;
+
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 1300);
+  }
+}
+
+/* =========================================================
+   АДМИН: добавление
+   ========================================================= */
+function initPokedexSelect() {
+  const sel = document.getElementById('pokeSelect');
+  POKEDEX.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => {
+    const name = sel.value;
+    if (!name) return;
+    document.getElementById('pokeName').value = name;
+    document.getElementById('pokeImg').value = getSpriteUrl(name);
+  };
+}
+initPokedexSelect();
+
+document.getElementById('addPokeBtn').onclick = () => {
+  document.getElementById('pokeError').textContent = '';
+  document.getElementById('addPokeModal').classList.add('active');
+};
+
+document.getElementById('savePoke').onclick = () => {
+  const name = document.getElementById('pokeName').value.trim();
+  let img = document.getElementById('pokeImg').value.trim();
+  const lat = parseFloat(document.getElementById('pokeLat').value);
+  const lng = parseFloat(document.getElementById('pokeLng').value);
+
+  if (!name || isNaN(lat) || isNaN(lng)) {
+    document.getElementById('pokeError').textContent = '✗ ЗАПОЛНИ ИМЯ И КООРДИНАТЫ';
+    return;
+  }
+  if (!img) {
+    img = getSpriteUrl(name);
+    if (!img) {
+      document.getElementById('pokeError').textContent = '✗ НЕТ КАРТИНКИ';
+      return;
+    }
+  }
+
+  const pokemons = DB.get('pokemons', []);
+  const id = 'p' + Date.now();
+  pokemons.push({ id, name, img, lat, lng });
+  DB.set('pokemons', pokemons);
+
+  renderPokemons();
+  document.getElementById('addPokeModal').classList.remove('active');
+  document.getElementById('pokeSelect').value = '';
+  document.getElementById('pokeName').value = '';
+  document.getElementById('pokeImg').value = '';
+  document.getElementById('pokeLat').value = '';
+  document.getElementById('pokeLng').value = '';
+  alert(`${name.toUpperCase()} ДОБАВЛЕН!\n\nQR = "${name}"`);
+};
+
+/* =========================================================
+   АДМИН: удаление
+   ========================================================= */
+document.getElementById('deletePokeBtn').onclick = () => {
+  renderDeleteList();
+  document.getElementById('deletePokeModal').classList.add('active');
+};
+
+function renderDeleteList() {
+  const pokemons = DB.get('pokemons', []);
+  const list = document.getElementById('deletePokeList');
+
+  if (!pokemons.length) {
+    list.innerHTML = '<p class="hint">НА КАРТЕ НЕТ ПОКЕМОНОВ</p>';
+    return;
+  }
+
+  list.innerHTML = pokemons.map(p => `
+    <div class="poke-item">
+      <div class="poke-item-info">
+        <img src="${p.img}" alt="${p.name}">
+        <div>
+          <b>${p.name.toUpperCase()}</b>
+          <small>${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</small>
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="deletePokemon('${p.id}')" style="padding:8px 10px;font-size:0.6rem;">🗑</button>
+    </div>
+  `).join('');
+}
+
+window.deletePokemon = function(id) {
+  const pokemons = DB.get('pokemons', []);
+  const poke = pokemons.find(p => p.id === id);
+  if (!poke) return;
+  if (!confirm(`УДАЛИТЬ ${poke.name.toUpperCase()} С КАРТЫ?`)) return;
+
+  DB.set('pokemons', pokemons.filter(p => p.id !== id));
+
+  const users = DB.get('users', []);
+  users.forEach(u => {
+    if (u.caught) u.caught = u.caught.filter(x => x !== id);
+  });
+  DB.set('users', users);
+
+  renderPokemons();
+  renderDeleteList();
+  alert(`🗑 ${poke.name.toUpperCase()} УДАЛЁН`);
+};
+
+/* =========================================================
+   АДМИН: пользователи
+   ========================================================= */
+document.getElementById('viewUsersBtn').onclick = () => {
+  const users = DB.get('users', []);
+  const list = document.getElementById('usersList');
+
+  list.innerHTML = users.map(u => `
+    <div class="user-item" onclick="toggleUserCollection('${u.login}')">
+      <b style="color:var(--yellow);font-size:0.7rem;">${u.login.toUpperCase()}</b> ${u.isAdmin ? '👑' : ''}
+      <small style="color:var(--gray);display:block;margin-top:6px;font-size:0.55rem;">ПОЙМАНО: ${u.collection.length}</small>
+      <div id="ucol-${u.login}" style="display:none;margin-top:12px;">
+        ${u.collection.length
+          ? '<div class="collection-grid">' + u.collection.map(item => {
+              const img = getSpriteUrl(item.name);
+              const cp = item.stats?.cp?.value ?? 0;
+              return `<div class="poke-card"><img src="${img}"><div class="poke-name">${item.name.toUpperCase()}</div><div class="poke-cp">CP ${cp}</div></div>`;
+            }).join('') + '</div>'
+          : '<span class="hint">ПУСТО</span>'}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('usersModal').classList.add('active');
+};
+
+window.toggleUserCollection = function(login) {
+  const el = document.getElementById('ucol-' + login);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
+
+/* =========================================================
+   Клик по карте (админ)
+   ========================================================= */
+map.on('click', e => {
+  if (!currentUser) return;
+  const user = getUser(currentUser.login);
+  if (!user?.isAdmin) return;
+
+  const lat = e.latlng.lat.toFixed(6);
+  const lng = e.latlng.lng.toFixed(6);
+  document.getElementById('pokeLat').value = lat;
+  document.getElementById('pokeLng').value = lng;
+});
+
+/* =========================================================
+   ФОНОВАЯ МУЗЫКА
+   ========================================================= */
+const bgMusic = document.getElementById('bgMusic');
+const musicBtn = document.getElementById('musicBtn');
+const MUSIC_KEY = 'musicEnabled';
+
+bgMusic.volume = 0.4; // 40% громкости
+
+let musicEnabled = DB.get(MUSIC_KEY, true);
+if (musicEnabled === undefined) musicEnabled = true;
+
+function updateMusicButton() {
+  if (musicEnabled) {
+    musicBtn.textContent = '🔊';
+    musicBtn.classList.remove('muted');
+  } else {
+    musicBtn.textContent = '🔇';
+    musicBtn.classList.add('muted');
+  }
+}
+updateMusicButton();
+
+function startMusic() {
+  if (!musicEnabled) return;
+  const p = bgMusic.play();
+  if (p && p.catch) p.catch(() => { /* ждём следующего клика */ });
+}
+
+function stopMusic() {
+  bgMusic.pause();
+}
+
+// Попытка автозапуска
+startMusic();
+
+// Первый клик — запуск музыки (обход блокировки автоплея)
+function firstInteraction() {
+  if (musicEnabled && bgMusic.paused) {
+    startMusic();
+  }
+  document.removeEventListener('click', firstInteraction);
+  document.removeEventListener('keydown', firstInteraction);
+  document.removeEventListener('touchstart', firstInteraction);
+}
+document.addEventListener('click', firstInteraction);
+document.addEventListener('keydown', firstInteraction);
+document.addEventListener('touchstart', firstInteraction);
+
+// Кнопка вкл/выкл
+musicBtn.onclick = (e) => {
+  e.stopPropagation();
+  musicEnabled = !musicEnabled;
+  DB.set(MUSIC_KEY, musicEnabled);
+  updateMusicButton();
+  if (musicEnabled) {
+    startMusic();
+  } else {
+    stopMusic();
+  }
+};
+
+/* =========================================================
+   СТАРТ
+   ========================================================= */
+updateHeader();
+</script>
+</body>
+</html>
