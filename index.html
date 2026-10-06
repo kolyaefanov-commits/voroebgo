@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
   :root {
@@ -39,7 +40,7 @@
     line-height: 1.6;
   }
 
-  /* ============== ШАПКА ============== */
+  /* ШАПКА */
   .hero {
     background: var(--black);
     padding: 12px 20px;
@@ -76,7 +77,7 @@
   }
   .user-info span { color: var(--yellow); font-size: 0.7rem; }
 
-  /* ============== КНОПКИ ============== */
+  /* КНОПКИ */
   .btn {
     font-family: 'Press Start 2P', monospace;
     font-size: 0.7rem;
@@ -104,7 +105,6 @@
   .btn-danger { background: var(--pink-dark); color: var(--white); }
   .btn-danger:hover { background: var(--pink); color: var(--white); box-shadow: 4px 4px 0 var(--yellow); }
 
-  /* Кнопка музыки */
   .music-btn {
     background: var(--black);
     color: var(--yellow);
@@ -123,7 +123,7 @@
   }
   .music-btn.muted { color: var(--gray); border-color: var(--gray); }
 
-  /* ============== КАРТА ============== */
+  /* КАРТА */
   #map {
     position: absolute;
     top: 62px; left: 0; right: 0; bottom: 0;
@@ -132,7 +132,7 @@
     filter: contrast(1.05) saturate(1.1);
   }
 
-  /* ============== ПАНЕЛЬ АДМИНА ============== */
+  /* ПАНЕЛЬ АДМИНА */
   #adminPanel {
     position: fixed; right: 20px; bottom: 20px;
     background: var(--black);
@@ -152,7 +152,7 @@
   }
   #adminPanel .btn { width: 100%; margin-bottom: 8px; }
 
-  /* ============== МОДАЛКИ ============== */
+  /* МОДАЛКИ */
   .modal {
     position: fixed; inset: 0; background: rgba(0,0,0,0.85);
     display: none; align-items: center; justify-content: center; z-index: 1000;
@@ -212,7 +212,7 @@
   }
   .modal-content .row .btn { flex: 1; padding: 12px; }
 
-  /* ============== КОЛЛЕКЦИЯ ============== */
+  /* КОЛЛЕКЦИЯ */
   .collection-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -274,7 +274,7 @@
     text-align: center;
   }
 
-  /* ============== СПИСКИ (админ) ============== */
+  /* СПИСКИ (админ) */
   .user-item, .poke-item {
     background: var(--black-2);
     padding: 12px 16px;
@@ -300,7 +300,7 @@
   .poke-item-info b { font-size: 0.65rem; color: var(--yellow); }
   .poke-item-info small { font-size: 0.55rem; color: var(--gray); display: block; margin-top: 4px; }
 
-  /* ============== МАРКЕРЫ ============== */
+  /* МАРКЕРЫ */
   .poke-marker {
     background: var(--black);
     width: 52px; height: 52px;
@@ -344,14 +344,11 @@
     font-size: 18px !important;
   }
 
-  /* Скроллбар */
   .modal-content::-webkit-scrollbar { width: 8px; }
   .modal-content::-webkit-scrollbar-track { background: var(--black-2); }
   .modal-content::-webkit-scrollbar-thumb { background: var(--pink); }
 
-  /* =========================================================
-     ПРОФИЛЬ ПОКЕМОНА
-     ========================================================= */
+  /* ПРОФИЛЬ */
   .profile-header {
     display: flex;
     flex-direction: column;
@@ -427,9 +424,7 @@
   .star-filled { color: var(--yellow); }
   .star-empty { color: var(--black-3); }
 
-  /* =========================================================
-     БОЛЬШОЙ СПРАЙТ
-     ========================================================= */
+  /* БОЛЬШОЙ СПРАЙТ */
   #bigSpriteModal .modal-content {
     max-width: 420px;
     text-align: center;
@@ -445,9 +440,7 @@
     padding: 16px;
   }
 
-  /* =========================================================
-     АНИМАЦИЯ ПОИМКИ
-     ========================================================= */
+  /* АНИМАЦИЯ ПОИМКИ */
   #catchOverlay {
     position: fixed;
     inset: 0;
@@ -543,9 +536,30 @@
   @keyframes stageOut {
     to { transform: scale(1.5); opacity: 0; }
   }
+
+  /* Загрузка */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: var(--yellow);
+    font-size: 1rem;
+    letter-spacing: 3px;
+  }
+  #loading.hidden { display: none; }
+  @keyframes dots { 0%,20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } }
+  #loading::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+  }
 </style>
 </head>
 <body>
+
+<div id="loading">ЗАГРУЗКА</div>
 
 <header class="hero">
   <h1>VoroebGO</h1>
@@ -565,7 +579,7 @@
   <p class="hint">Клик по карте → координаты в форму</p>
 </div>
 
-<!-- Модалка: вход/регистрация -->
+<!-- Авторизация -->
 <div class="modal" id="authModal">
   <div class="modal-content">
     <h2>► PRESS START</h2>
@@ -581,7 +595,7 @@
   </div>
 </div>
 
-<!-- Модалка: коллекция -->
+<!-- Коллекция -->
 <div class="modal" id="collectionModal">
   <div class="modal-content">
     <h2>🎒 КОЛЛЕКЦИЯ</h2>
@@ -592,7 +606,7 @@
   </div>
 </div>
 
-<!-- Модалка: профиль покемона -->
+<!-- Профиль -->
 <div class="modal" id="profileModal">
   <div class="modal-content">
     <h2>📊 ПРОФИЛЬ</h2>
@@ -603,7 +617,7 @@
   </div>
 </div>
 
-<!-- Модалка: большой спрайт -->
+<!-- Большой спрайт -->
 <div class="modal" id="bigSpriteModal">
   <div class="modal-content">
     <h2 id="bigSpriteTitle">POKEMON</h2>
@@ -614,7 +628,7 @@
   </div>
 </div>
 
-<!-- Модалка: сканер -->
+<!-- Сканер -->
 <div class="modal" id="scannerModal">
   <div class="modal-content">
     <h2>📷 СКАНЕР</h2>
@@ -626,7 +640,7 @@
   </div>
 </div>
 
-<!-- Модалка: добавление покемона (админ) -->
+<!-- Добавление -->
 <div class="modal" id="addPokeModal">
   <div class="modal-content">
     <h2>+ ДОБАВИТЬ</h2>
@@ -650,7 +664,7 @@
   </div>
 </div>
 
-<!-- Модалка: удаление покемона (админ) -->
+<!-- Удаление -->
 <div class="modal" id="deletePokeModal">
   <div class="modal-content">
     <h2>🗑 УДАЛИТЬ</h2>
@@ -662,7 +676,7 @@
   </div>
 </div>
 
-<!-- Модалка: пользователи (админ) -->
+<!-- Пользователи -->
 <div class="modal" id="usersModal">
   <div class="modal-content">
     <h2>👥 ИГРОКИ</h2>
@@ -673,7 +687,7 @@
   </div>
 </div>
 
-<!-- Оверлей анимации поимки -->
+<!-- Анимация поимки -->
 <div id="catchOverlay">
   <div class="catch-stage">
     <img id="catchSprite" class="catch-sprite" src="" alt="">
@@ -682,12 +696,20 @@
   </div>
 </div>
 
-<!-- Фоновая музыка -->
+<!-- Музыка -->
 <audio id="bgMusic" loop preload="auto" src="1-04. Aspertia City.mp3"></audio>
 
 <script>
 /* =========================================================
-   БИБЛИОТЕКА ПОКЕМОНОВ 1-го ПОКОЛЕНИЯ (151)
+   ⚙️ НАСТРОЙКИ SUPABASE — ЗАМЕНИТЕ НА СВОИ!
+   ========================================================= */
+const SUPABASE_URL = ''https://oxumlqamfzdhcrgjoquw.supabase.co/rest/v1/';
+const SUPABASE_KEY = 'sb_secret_zYv6nJaZSR2SUb7oAY4DWg_tm1YwIYF';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* =========================================================
+   БИБЛИОТЕКА ПОКЕМОНОВ (151)
    ========================================================= */
 const POKEDEX = [
   "Bulbasaur","Ivysaur","Venusaur","Charmander","Charmeleon","Charizard","Squirtle","Wartortle","Blastoise",
@@ -725,7 +747,6 @@ function getSpriteUrl(name) {
 function rollStat(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
 function starsFromPercent(percent) {
   if (percent >= 90) return 5;
   if (percent >= 75) return 4;
@@ -734,7 +755,6 @@ function starsFromPercent(percent) {
   if (percent >= 15) return 1;
   return 0;
 }
-
 function generateStats() {
   const cp  = rollStat(10, 1500);
   const hp  = rollStat(10, 200);
@@ -747,60 +767,82 @@ function generateStats() {
 }
 
 /* =========================================================
-   ХРАНИЛИЩЕ
+   СОСТОЯНИЕ
    ========================================================= */
-const DB = {
-  get(key, def) {
-    try { return JSON.parse(localStorage.getItem(key)) ?? def; }
-    catch { return def; }
-  },
-  set(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-};
+let currentUser = null; // { login, isAdmin, collection, caught }
+let allPokemons = [];   // кэш покемонов с карты
+const markers = {};
 
-if (!DB.get('users', null)) {
-  DB.set('users', [{ login: 'admin', password: 'admin', isAdmin: true, collection: [], caught: [] }]);
-}
-if (!DB.get('pokemons', null)) {
-  DB.set('pokemons', [
-    { id: 'p1', name: 'Pikachu', img: getSpriteUrl('Pikachu'), lat: 55.7558, lng: 37.6173 },
-    { id: 'p2', name: 'Bulbasaur', img: getSpriteUrl('Bulbasaur'), lat: 55.7600, lng: 37.6300 },
-    { id: 'p3', name: 'Charmander', img: getSpriteUrl('Charmander'), lat: 55.7480, lng: 37.6050 }
-  ]);
+/* =========================================================
+   API-ОБЁРТКИ
+   ========================================================= */
+async function apiLoadPokemons() {
+  const { data, error } = await supabase.from('pokemons').select('*').order('created_at');
+  if (error) { console.error(error); return []; }
+  return data || [];
 }
 
-// Миграция старых пользователей
-(function migrate() {
-  const users = DB.get('users', []);
-  const pokemons = DB.get('pokemons', []);
-  let changed = false;
-  users.forEach(u => {
-    if (!u.collection) { u.collection = []; changed = true; }
-    if (!u.caught) { u.caught = []; changed = true; }
-    u.collection = u.collection.map(item => {
-      if (typeof item === 'string') {
-        changed = true;
-        const p = pokemons.find(x => x.name === item);
-        if (p) u.caught.push(p.id);
-        return { name: item, id: p ? p.id : null, stats: generateStats() };
-      }
-      return item;
-    });
-  });
-  if (changed) DB.set('users', users);
-})();
+async function apiAddPokemon(pokemon) {
+  const { data, error } = await supabase.from('pokemons').insert([pokemon]).select().single();
+  if (error) { console.error(error); throw new Error(error.message); }
+  return data;
+}
 
-let currentUser = DB.get('currentUser', null);
+async function apiDeletePokemon(id) {
+  const { error } = await supabase.from('pokemons').delete().eq('id', id);
+  if (error) console.error(error);
+}
 
-function getUser(login) { return DB.get('users', []).find(u => u.login === login); }
-function saveUser(user) {
-  const users = DB.get('users', []);
-  const idx = users.findIndex(u => u.login === user.login);
-  if (idx >= 0) users[idx] = user; else users.push(user);
-  DB.set('users', users);
+async function apiRegister(login, password) {
+  const { data, error } = await supabase
+    .from('users')
+    .insert([{ login, password, is_admin: false, collection: [], caught: [] }])
+    .select()
+    .single();
+  if (error) {
+    if (error.code === '23505') throw new Error('Логин занят');
+    throw new Error(error.message);
+  }
+  return normalizeUser(data);
+}
+
+async function apiLogin(login, password) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('login', login)
+    .eq('password', password)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Неверный логин или пароль');
+  return normalizeUser(data);
+}
+
+async function apiUpdateUser(user) {
+  const { error } = await supabase
+    .from('users')
+    .update({ collection: user.collection, caught: user.caught })
+    .eq('login', user.login);
+  if (error) console.error(error);
+}
+
+async function apiGetUsers() {
+  const { data, error } = await supabase.from('users').select('*').order('login');
+  if (error) { console.error(error); return []; }
+  return data.map(normalizeUser);
+}
+
+function normalizeUser(u) {
+  return {
+    login: u.login,
+    isAdmin: !!u.is_admin,
+    collection: u.collection || [],
+    caught: u.caught || []
+  };
 }
 
 /* =========================================================
-   КАРТА — OpenTopoMap
+   КАРТА
    ========================================================= */
 const map = L.map('map').setView([55.7558, 37.6173], 12);
 
@@ -810,16 +852,15 @@ L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap, SRTM | © OpenTopoMap'
 }).addTo(map);
 
-const markers = {};
+async function renderPokemons() {
+  allPokemons = await apiLoadPokemons();
 
-function renderPokemons() {
-  const pokemons = DB.get('pokemons', []);
   Object.values(markers).forEach(m => map.removeLayer(m));
   for (const k in markers) delete markers[k];
 
-  const caughtIds = currentUser ? (getUser(currentUser.login)?.caught || []) : [];
+  const caughtIds = currentUser?.caught || [];
 
-  for (const p of pokemons) {
+  for (const p of allPokemons) {
     if (caughtIds.includes(p.id)) continue;
 
     const icon = L.divIcon({
@@ -851,9 +892,8 @@ function updateHeader() {
     btn.onclick = () => openAuth();
     el.appendChild(btn);
   } else {
-    const user = getUser(currentUser.login);
     const span = document.createElement('span');
-    span.textContent = `👤 ${user.login.toUpperCase()}${user.isAdmin ? ' 👑' : ''}`;
+    span.textContent = `👤 ${currentUser.login.toUpperCase()}${currentUser.isAdmin ? ' 👑' : ''}`;
     el.appendChild(span);
 
     const colBtn = document.createElement('button');
@@ -874,9 +914,8 @@ function updateHeader() {
     outBtn.onclick = logout;
     el.appendChild(outBtn);
 
-    document.getElementById('adminPanel').classList.toggle('active', !!user.isAdmin);
+    document.getElementById('adminPanel').classList.toggle('active', !!currentUser.isAdmin);
   }
-  renderPokemons();
 }
 
 function openAuth() {
@@ -884,59 +923,73 @@ function openAuth() {
   document.getElementById('authModal').classList.add('active');
 }
 
-document.getElementById('loginBtn').onclick = () => {
-  const login = document.getElementById('authLogin').value.trim();
-  const pass = document.getElementById('authPass').value;
-  const user = getUser(login);
-  if (!user || user.password !== pass) {
-    document.getElementById('authError').textContent = '✗ НЕВЕРНЫЙ ЛОГИН ИЛИ ПАРОЛЬ';
-    return;
-  }
-  currentUser = { login };
-  DB.set('currentUser', currentUser);
-  document.getElementById('authModal').classList.remove('active');
-  updateHeader();
-};
-
-document.getElementById('registerBtn').onclick = () => {
+document.getElementById('loginBtn').onclick = async () => {
   const login = document.getElementById('authLogin').value.trim();
   const pass = document.getElementById('authPass').value;
   if (!login || !pass) {
     document.getElementById('authError').textContent = '✗ ЗАПОЛНИ ВСЕ ПОЛЯ';
     return;
   }
-  if (getUser(login)) {
-    document.getElementById('authError').textContent = '✗ ЛОГИН ЗАНЯТ';
+  try {
+    currentUser = await apiLogin(login, pass);
+    localStorage.setItem('currentLogin', login);
+    document.getElementById('authModal').classList.remove('active');
+    updateHeader();
+    await renderPokemons();
+  } catch (e) {
+    document.getElementById('authError').textContent = '✗ ' + e.message.toUpperCase();
+  }
+};
+
+document.getElementById('registerBtn').onclick = async () => {
+  const login = document.getElementById('authLogin').value.trim();
+  const pass = document.getElementById('authPass').value;
+  if (!login || !pass) {
+    document.getElementById('authError').textContent = '✗ ЗАПОЛНИ ВСЕ ПОЛЯ';
     return;
   }
-  saveUser({ login, password: pass, isAdmin: false, collection: [], caught: [] });
-  currentUser = { login };
-  DB.set('currentUser', currentUser);
-  document.getElementById('authModal').classList.remove('active');
-  updateHeader();
+  try {
+    currentUser = await apiRegister(login, pass);
+    localStorage.setItem('currentLogin', login);
+    document.getElementById('authModal').classList.remove('active');
+    updateHeader();
+    await renderPokemons();
+  } catch (e) {
+    document.getElementById('authError').textContent = '✗ ' + e.message.toUpperCase();
+  }
 };
 
 function logout() {
   currentUser = null;
-  localStorage.removeItem('currentUser');
+  localStorage.removeItem('currentLogin');
   updateHeader();
+  renderPokemons();
+}
+
+/* Автовход (только по логину, пароль не сохранён — пользователь введёт заново) */
+function tryAutoLogin() {
+  // Supabase не хранит пароль между сессиями без auth.
+  // Показать модалку входа при первом заходе — норм.
+  if (!currentUser) {
+    // не открываем автоматически, чтобы не мешать осмотру карты
+  }
 }
 
 /* =========================================================
    КОЛЛЕКЦИЯ
    ========================================================= */
 function openCollection() {
-  const user = getUser(currentUser.login);
+  if (!currentUser) return;
   const content = document.getElementById('collectionContent');
 
-  if (!user.collection.length) {
+  if (!currentUser.collection.length) {
     content.innerHTML = '<p class="hint">ПУСТО. СКАНИРУЙ QR-КОДЫ, ЧТОБЫ ЛОВИТЬ!</p>';
     document.getElementById('collectionModal').classList.add('active');
     return;
   }
 
   content.innerHTML = '<div class="collection-grid">' +
-    user.collection.map((item, idx) => {
+    currentUser.collection.map((item, idx) => {
       const img = getSpriteUrl(item.name);
       const cp = item.stats?.cp?.value ?? 0;
       const starsTotal = (item.stats?.cp?.stars || 0) + (item.stats?.hp?.stars || 0) + (item.stats?.atk?.stars || 0);
@@ -961,9 +1014,7 @@ function openCollection() {
 function starsHtml(n) {
   let s = '';
   for (let i = 0; i < 5; i++) {
-    s += i < n
-      ? '<span class="star-filled">★</span>'
-      : '<span class="star-empty">★</span>';
+    s += i < n ? '<span class="star-filled">★</span>' : '<span class="star-empty">★</span>';
   }
   return s;
 }
@@ -981,8 +1032,8 @@ function statRow(label, stat, max) {
 }
 
 window.openProfile = function(index) {
-  const user = getUser(currentUser.login);
-  const item = user.collection[index];
+  if (!currentUser) return;
+  const item = currentUser.collection[index];
   if (!item) return;
 
   const img = getSpriteUrl(item.name);
@@ -1014,9 +1065,6 @@ window.openProfile = function(index) {
   document.getElementById('profileModal').classList.add('active');
 };
 
-/* =========================================================
-   БОЛЬШОЙ СПРАЙТ
-   ========================================================= */
 window.openBigSprite = function(name) {
   const img = getSpriteUrl(name);
   document.getElementById('bigSpriteTitle').textContent = name.toUpperCase();
@@ -1030,6 +1078,7 @@ window.openBigSprite = function(name) {
 let html5Qr = null;
 
 function openScanner() {
+  if (!currentUser) { openAuth(); return; }
   document.getElementById('scannerModal').classList.add('active');
   html5Qr = new Html5Qrcode("qrReader");
   html5Qr.start(
@@ -1053,30 +1102,32 @@ function closeScanner() {
 
 document.getElementById('closeScanner').onclick = closeScanner;
 
-function onScanSuccess(decodedText) {
+async function onScanSuccess(decodedText) {
   const name = decodedText.trim();
-  const pokemons = DB.get('pokemons', []);
-  const poke = pokemons.find(p => p.name.toLowerCase() === name.toLowerCase());
+  const poke = allPokemons.find(p => p.name.toLowerCase() === name.toLowerCase());
 
   if (!poke) {
     alert('✗ НЕ НАЙДЕН НА КАРТЕ: ' + name);
     return;
   }
 
-  const user = getUser(currentUser.login);
-  if (!user.collection) user.collection = [];
-  if (!user.caught) user.caught = [];
-
-  if (user.caught.includes(poke.id)) {
+  if (currentUser.caught.includes(poke.id)) {
     alert(`У ТЕБЯ УЖЕ ЕСТЬ ${poke.name.toUpperCase()}!`);
     closeScanner();
     return;
   }
 
   const stats = generateStats();
-  user.collection.push({ name: poke.name, id: poke.id, stats });
-  user.caught.push(poke.id);
-  saveUser(user);
+  const newPokemon = { name: poke.name, id: poke.id, stats };
+
+  currentUser.collection.push(newPokemon);
+  currentUser.caught.push(poke.id);
+
+  try {
+    await apiUpdateUser(currentUser);
+  } catch (e) {
+    console.error(e);
+  }
 
   closeScanner();
 
@@ -1186,7 +1237,7 @@ document.getElementById('addPokeBtn').onclick = () => {
   document.getElementById('addPokeModal').classList.add('active');
 };
 
-document.getElementById('savePoke').onclick = () => {
+document.getElementById('savePoke').onclick = async () => {
   const name = document.getElementById('pokeName').value.trim();
   let img = document.getElementById('pokeImg').value.trim();
   const lat = parseFloat(document.getElementById('pokeLat').value);
@@ -1196,47 +1247,45 @@ document.getElementById('savePoke').onclick = () => {
     document.getElementById('pokeError').textContent = '✗ ЗАПОЛНИ ИМЯ И КООРДИНАТЫ';
     return;
   }
+  if (!img) img = getSpriteUrl(name);
   if (!img) {
-    img = getSpriteUrl(name);
-    if (!img) {
-      document.getElementById('pokeError').textContent = '✗ НЕТ КАРТИНКИ';
-      return;
-    }
+    document.getElementById('pokeError').textContent = '✗ НЕТ КАРТИНКИ';
+    return;
   }
 
-  const pokemons = DB.get('pokemons', []);
-  const id = 'p' + Date.now();
-  pokemons.push({ id, name, img, lat, lng });
-  DB.set('pokemons', pokemons);
-
-  renderPokemons();
-  document.getElementById('addPokeModal').classList.remove('active');
-  document.getElementById('pokeSelect').value = '';
-  document.getElementById('pokeName').value = '';
-  document.getElementById('pokeImg').value = '';
-  document.getElementById('pokeLat').value = '';
-  document.getElementById('pokeLng').value = '';
-  alert(`${name.toUpperCase()} ДОБАВЛЕН!\n\nQR = "${name}"`);
+  try {
+    await apiAddPokemon({ id: 'p' + Date.now(), name, img, lat, lng });
+    await renderPokemons();
+    document.getElementById('addPokeModal').classList.remove('active');
+    document.getElementById('pokeSelect').value = '';
+    document.getElementById('pokeName').value = '';
+    document.getElementById('pokeImg').value = '';
+    document.getElementById('pokeLat').value = '';
+    document.getElementById('pokeLng').value = '';
+    alert(`${name.toUpperCase()} ДОБАВЛЕН!\n\nQR = "${name}"`);
+  } catch (e) {
+    document.getElementById('pokeError').textContent = '✗ ' + e.message.toUpperCase();
+  }
 };
 
 /* =========================================================
    АДМИН: удаление
    ========================================================= */
-document.getElementById('deletePokeBtn').onclick = () => {
-  renderDeleteList();
+document.getElementById('deletePokeBtn').onclick = async () => {
+  await renderDeleteList();
   document.getElementById('deletePokeModal').classList.add('active');
 };
 
-function renderDeleteList() {
-  const pokemons = DB.get('pokemons', []);
+async function renderDeleteList() {
+  allPokemons = await apiLoadPokemons();
   const list = document.getElementById('deletePokeList');
 
-  if (!pokemons.length) {
+  if (!allPokemons.length) {
     list.innerHTML = '<p class="hint">НА КАРТЕ НЕТ ПОКЕМОНОВ</p>';
     return;
   }
 
-  list.innerHTML = pokemons.map(p => `
+  list.innerHTML = allPokemons.map(p => `
     <div class="poke-item">
       <div class="poke-item-info">
         <img src="${p.img}" alt="${p.name}">
@@ -1250,30 +1299,22 @@ function renderDeleteList() {
   `).join('');
 }
 
-window.deletePokemon = function(id) {
-  const pokemons = DB.get('pokemons', []);
-  const poke = pokemons.find(p => p.id === id);
+window.deletePokemon = async function(id) {
+  const poke = allPokemons.find(p => p.id === id);
   if (!poke) return;
   if (!confirm(`УДАЛИТЬ ${poke.name.toUpperCase()} С КАРТЫ?`)) return;
 
-  DB.set('pokemons', pokemons.filter(p => p.id !== id));
-
-  const users = DB.get('users', []);
-  users.forEach(u => {
-    if (u.caught) u.caught = u.caught.filter(x => x !== id);
-  });
-  DB.set('users', users);
-
-  renderPokemons();
-  renderDeleteList();
+  await apiDeletePokemon(id);
+  await renderPokemons();
+  await renderDeleteList();
   alert(`🗑 ${poke.name.toUpperCase()} УДАЛЁН`);
 };
 
 /* =========================================================
    АДМИН: пользователи
    ========================================================= */
-document.getElementById('viewUsersBtn').onclick = () => {
-  const users = DB.get('users', []);
+document.getElementById('viewUsersBtn').onclick = async () => {
+  const users = await apiGetUsers();
   const list = document.getElementById('usersList');
 
   list.innerHTML = users.map(u => `
@@ -1305,9 +1346,7 @@ window.toggleUserCollection = function(login) {
    Клик по карте (админ)
    ========================================================= */
 map.on('click', e => {
-  if (!currentUser) return;
-  const user = getUser(currentUser.login);
-  if (!user?.isAdmin) return;
+  if (!currentUser?.isAdmin) return;
 
   const lat = e.latlng.lat.toFixed(6);
   const lng = e.latlng.lng.toFixed(6);
@@ -1322,10 +1361,10 @@ const bgMusic = document.getElementById('bgMusic');
 const musicBtn = document.getElementById('musicBtn');
 const MUSIC_KEY = 'musicEnabled';
 
-bgMusic.volume = 0.4; // 40% громкости
+bgMusic.volume = 0.4;
 
-let musicEnabled = DB.get(MUSIC_KEY, true);
-if (musicEnabled === undefined) musicEnabled = true;
+let musicEnabled = localStorage.getItem(MUSIC_KEY);
+musicEnabled = musicEnabled === null ? true : musicEnabled === 'true';
 
 function updateMusicButton() {
   if (musicEnabled) {
@@ -1341,21 +1380,14 @@ updateMusicButton();
 function startMusic() {
   if (!musicEnabled) return;
   const p = bgMusic.play();
-  if (p && p.catch) p.catch(() => { /* ждём следующего клика */ });
+  if (p && p.catch) p.catch(() => {});
 }
+function stopMusic() { bgMusic.pause(); }
 
-function stopMusic() {
-  bgMusic.pause();
-}
-
-// Попытка автозапуска
 startMusic();
 
-// Первый клик — запуск музыки (обход блокировки автоплея)
 function firstInteraction() {
-  if (musicEnabled && bgMusic.paused) {
-    startMusic();
-  }
+  if (musicEnabled && bgMusic.paused) startMusic();
   document.removeEventListener('click', firstInteraction);
   document.removeEventListener('keydown', firstInteraction);
   document.removeEventListener('touchstart', firstInteraction);
@@ -1364,23 +1396,22 @@ document.addEventListener('click', firstInteraction);
 document.addEventListener('keydown', firstInteraction);
 document.addEventListener('touchstart', firstInteraction);
 
-// Кнопка вкл/выкл
 musicBtn.onclick = (e) => {
   e.stopPropagation();
   musicEnabled = !musicEnabled;
-  DB.set(MUSIC_KEY, musicEnabled);
+  localStorage.setItem(MUSIC_KEY, musicEnabled);
   updateMusicButton();
-  if (musicEnabled) {
-    startMusic();
-  } else {
-    stopMusic();
-  }
+  if (musicEnabled) startMusic(); else stopMusic();
 };
 
 /* =========================================================
    СТАРТ
    ========================================================= */
-updateHeader();
+(async function init() {
+  updateHeader();
+  await renderPokemons();
+  document.getElementById('loading').classList.add('hidden');
+})();
 </script>
 </body>
 </html>
