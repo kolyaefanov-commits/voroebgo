@@ -706,7 +706,7 @@
 const SUPABASE_URL = 'https://oxumlqamfzdhcrgjoquw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtZnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* =========================================================
    БИБЛИОТЕКА ПОКЕМОНОВ (151)
@@ -777,19 +777,19 @@ const markers = {};
    API-ОБЁРТКИ
    ========================================================= */
 async function apiLoadPokemons() {
-  const { data, error } = await supabase.from('pokemons').select('*').order('created_at');
+  const { data, error } = await db.from('pokemons').select('*').order('created_at');
   if (error) { console.error(error); return []; }
   return data || [];
 }
 
 async function apiAddPokemon(pokemon) {
-  const { data, error } = await supabase.from('pokemons').insert([pokemon]).select().single();
+  const { data, error } = await db.from('pokemons').insert([pokemon]).select().single();
   if (error) { console.error(error); throw new Error(error.message); }
   return data;
 }
 
 async function apiDeletePokemon(id) {
-  const { error } = await supabase.from('pokemons').delete().eq('id', id);
+  const { error } = await db.from('pokemons').delete().eq('id', id);
   if (error) console.error(error);
 }
 
@@ -827,7 +827,7 @@ async function apiUpdateUser(user) {
 }
 
 async function apiGetUsers() {
-  const { data, error } = await supabase.from('users').select('*').order('login');
+  const { data, error } = await db.from('users').select('*').order('login');
   if (error) { console.error(error); return []; }
   return data.map(normalizeUser);
 }
