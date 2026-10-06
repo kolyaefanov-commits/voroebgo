@@ -701,7 +701,7 @@
 
 <script>
 /* =========================================================
-   ⚙️ НАСТРОЙКИ SUPABASE — ЗАМЕНИТЕ НА СВОИ!
+   ⚙️ НАСТРОЙКИ SUPABASE
    ========================================================= */
 const SUPABASE_URL = 'https://oxumlqamfzdhcrgjoquw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtZnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
@@ -769,8 +769,8 @@ function generateStats() {
 /* =========================================================
    СОСТОЯНИЕ
    ========================================================= */
-let currentUser = null; // { login, isAdmin, collection, caught }
-let allPokemons = [];   // кэш покемонов с карты
+let currentUser = null;
+let allPokemons = [];
 const markers = {};
 
 /* =========================================================
@@ -794,7 +794,7 @@ async function apiDeletePokemon(id) {
 }
 
 async function apiRegister(login, password) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('users')
     .insert([{ login, password, is_admin: false, collection: [], caught: [] }])
     .select()
@@ -807,7 +807,7 @@ async function apiRegister(login, password) {
 }
 
 async function apiLogin(login, password) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('users')
     .select('*')
     .eq('login', login)
@@ -819,7 +819,7 @@ async function apiLogin(login, password) {
 }
 
 async function apiUpdateUser(user) {
-  const { error } = await supabase
+  const { error } = await db
     .from('users')
     .update({ collection: user.collection, caught: user.caught })
     .eq('login', user.login);
@@ -964,15 +964,6 @@ function logout() {
   localStorage.removeItem('currentLogin');
   updateHeader();
   renderPokemons();
-}
-
-/* Автовход (только по логину, пароль не сохранён — пользователь введёт заново) */
-function tryAutoLogin() {
-  // Supabase не хранит пароль между сессиями без auth.
-  // Показать модалку входа при первом заходе — норм.
-  if (!currentUser) {
-    // не открываем автоматически, чтобы не мешать осмотру карты
-  }
 }
 
 /* =========================================================
