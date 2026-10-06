@@ -257,6 +257,10 @@
     margin-top: 4px;
     letter-spacing: 2px;
   }
+  .poke-card.shiny {
+    border-color: var(--yellow);
+    box-shadow: 0 0 12px var(--yellow);
+  }
 
   #qrReader { width: 100%; margin-top: 10px; border: 3px solid var(--blue); }
 
@@ -299,6 +303,16 @@
   }
   .poke-item-info b { font-size: 0.65rem; color: var(--yellow); }
   .poke-item-info small { font-size: 0.55rem; color: var(--gray); display: block; margin-top: 4px; }
+
+  .qr-copy {
+    color: var(--blue);
+    cursor: pointer;
+    font-size: 0.55rem;
+    display: block;
+    margin-top: 6px;
+    word-break: break-all;
+  }
+  .qr-copy:hover { color: var(--pink); }
 
   /* МАРКЕРЫ */
   .poke-marker {
@@ -370,6 +384,10 @@
     transition: transform 0.2s;
   }
   .profile-sprite:hover { transform: scale(1.05); border-color: var(--pink); }
+  .profile-sprite.shiny {
+    border-color: var(--yellow);
+    box-shadow: 0 0 20px var(--yellow);
+  }
   .profile-name {
     font-size: 1rem;
     color: var(--yellow);
@@ -377,6 +395,14 @@
     text-align: center;
   }
   .profile-hint { font-size: 0.5rem; color: var(--gray); }
+
+  .shiny-label {
+    font-size: 0.7rem;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    margin-top: 6px;
+    text-shadow: 0 0 8px var(--yellow);
+  }
 
   .stat-row {
     display: flex;
@@ -471,6 +497,10 @@
     filter: drop-shadow(0 0 20px var(--yellow));
   }
 
+  .catch-sprite.shiny {
+    filter: drop-shadow(0 0 30px var(--yellow)) drop-shadow(0 0 60px var(--yellow));
+  }
+
   @keyframes catchPop {
     0%   { transform: scale(0.2) translateY(60px); opacity: 0; }
     25%  { transform: scale(1.3) translateY(-10px); opacity: 1; }
@@ -500,6 +530,11 @@
     letter-spacing: 2px;
     opacity: 0;
     animation: catchTitleIn 0.6s 1s ease-out forwards;
+    text-align: center;
+  }
+  .catch-subtitle.shiny {
+    color: var(--yellow);
+    text-shadow: 0 0 8px var(--yellow);
   }
 
   .firework-particle {
@@ -633,7 +668,7 @@
   <div class="modal-content">
     <h2>📷 СКАНЕР</h2>
     <div id="qrReader"></div>
-    <p class="hint">НАВЕДИ КАМЕРУ НА QR-КОД НАКЛЕЙКИ</p>
+    <p class="hint">НАВЕДИ КАМЕРУ НА QR-КОД НАКЛЕЙКИ<br>ФОРМАТ: Pikachu#p1712345678</p>
     <div class="row">
       <button id="closeScanner" class="btn btn-pink">ОТМЕНА</button>
     </div>
@@ -668,7 +703,7 @@
 <div class="modal" id="deletePokeModal">
   <div class="modal-content">
     <h2>🗑 УДАЛИТЬ</h2>
-    <p class="hint" style="margin-bottom:16px;">ВЫБЕРИ ПОКЕМОНА, ЧТОБЫ УБРАТЬ ЕГО С КАРТЫ</p>
+    <p class="hint" style="margin-bottom:16px;">ВЫБЕРИ ПОКЕМОНА, ЧТОБЫ УБРАТЬ ЕГО С КАРТЫ<br>КЛИК ПО QR — СКОПИРОВАТЬ</p>
     <div id="deletePokeList"></div>
     <div class="row">
       <button onclick="document.getElementById('deletePokeModal').classList.remove('active')" class="btn btn-pink">ЗАКРЫТЬ</button>
@@ -704,7 +739,7 @@
    ⚙️ НАСТРОЙКИ SUPABASE
    ========================================================= */
 const SUPABASE_URL = 'https://oxumlqamfzdhcrgjoquw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtZnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtFnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -736,9 +771,13 @@ function pokedexToId(name) {
   const idx = POKEDEX.indexOf(name);
   return idx >= 0 ? idx + 1 : null;
 }
-function getSpriteUrl(name) {
+
+function getSpriteUrl(name, shiny = false) {
   const id = pokedexToId(name);
-  return id ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png` : '';
+  if (!id) return '';
+  return shiny
+    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png`
+    : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 }
 
 /* =========================================================
@@ -759,10 +798,12 @@ function generateStats() {
   const cp  = rollStat(10, 1500);
   const hp  = rollStat(10, 200);
   const atk = rollStat(5, 150);
+  const shiny = Math.random() < 0.10;
   return {
     cp:  { value: cp,  stars: starsFromPercent((cp - 10) / (1500 - 10) * 100) },
     hp:  { value: hp,  stars: starsFromPercent((hp - 10) / (200 - 10) * 100) },
-    atk: { value: atk, stars: starsFromPercent((atk - 5) / (150 - 5) * 100) }
+    atk: { value: atk, stars: starsFromPercent((atk - 5) / (150 - 5) * 100) },
+    shiny
   };
 }
 
@@ -873,7 +914,7 @@ async function renderPokemons() {
     marker.bindPopup(`
       <img src="${p.img}" alt="${p.name}">
       <b>${p.name}</b><br>
-      <small>QR: ${p.name}</small>
+      <small>QR: ${p.name}#${p.id}</small>
     `);
     markers[p.id] = marker;
   }
@@ -981,15 +1022,16 @@ function openCollection() {
 
   content.innerHTML = '<div class="collection-grid">' +
     currentUser.collection.map((item, idx) => {
-      const img = getSpriteUrl(item.name);
+      const isShiny = !!item.shiny;
+      const img = isShiny ? getSpriteUrl(item.name, true) : (item.img || getSpriteUrl(item.name));
       const cp = item.stats?.cp?.value ?? 0;
       const starsTotal = (item.stats?.cp?.stars || 0) + (item.stats?.hp?.stars || 0) + (item.stats?.atk?.stars || 0);
       const avgStars = Math.round(starsTotal / 3);
       const starStr = '★'.repeat(avgStars) + '☆'.repeat(5 - avgStars);
       return `
-        <div class="poke-card" onclick="openProfile(${idx})">
+        <div class="poke-card ${isShiny ? 'shiny' : ''}" onclick="openProfile(${idx})">
           <img src="${img}" alt="${item.name}">
-          <div class="poke-name">${item.name.toUpperCase()}</div>
+          <div class="poke-name">${item.name.toUpperCase()}${isShiny ? ' ✨' : ''}</div>
           <div class="poke-cp">CP ${cp}</div>
           <div class="poke-stars">${starStr}</div>
         </div>`;
@@ -1027,7 +1069,8 @@ window.openProfile = function(index) {
   const item = currentUser.collection[index];
   if (!item) return;
 
-  const img = getSpriteUrl(item.name);
+  const isShiny = !!item.shiny;
+  const img = isShiny ? getSpriteUrl(item.name, true) : (item.img || getSpriteUrl(item.name));
   const stats = item.stats || generateStats();
 
   const totalStars = stats.cp.stars + stats.hp.stars + stats.atk.stars;
@@ -1040,11 +1083,12 @@ window.openProfile = function(index) {
 
   document.getElementById('profileContent').innerHTML = `
     <div class="profile-header">
-      <img class="profile-sprite" src="${img}" alt="${item.name}"
-           onclick="openBigSprite('${item.name}')">
-      <div class="profile-name">${item.name.toUpperCase()}</div>
+      <img class="profile-sprite ${isShiny ? 'shiny' : ''}" src="${img}" alt="${item.name}"
+           onclick="openBigSprite(${index})">
+      <div class="profile-name">${item.name.toUpperCase()}${isShiny ? ' ✨' : ''}</div>
       <div class="profile-hint">НАЖМИ НА СПРАЙТ, ЧТОБЫ УВЕЛИЧИТЬ</div>
       <div style="font-size:0.65rem;color:${rarityColor};letter-spacing:1px;margin-top:6px;">${rarity}</div>
+      ${isShiny ? '<div class="shiny-label">✨ ШАЙНИ ✨</div>' : ''}
     </div>
     ${statRow('CP',  stats.cp,  1500)}
     ${statRow('HP',  stats.hp,  200)}
@@ -1056,9 +1100,14 @@ window.openProfile = function(index) {
   document.getElementById('profileModal').classList.add('active');
 };
 
-window.openBigSprite = function(name) {
-  const img = getSpriteUrl(name);
-  document.getElementById('bigSpriteTitle').textContent = name.toUpperCase();
+window.openBigSprite = function(index) {
+  if (!currentUser) return;
+  const item = currentUser.collection[index];
+  if (!item) return;
+
+  const isShiny = !!item.shiny;
+  const img = isShiny ? getSpriteUrl(item.name, true) : (item.img || getSpriteUrl(item.name));
+  document.getElementById('bigSpriteTitle').textContent = item.name.toUpperCase() + (isShiny ? ' ✨' : '');
   document.getElementById('bigSpriteImg').src = img;
   document.getElementById('bigSpriteModal').classList.add('active');
 };
@@ -1094,22 +1143,55 @@ function closeScanner() {
 document.getElementById('closeScanner').onclick = closeScanner;
 
 async function onScanSuccess(decodedText) {
-  const name = decodedText.trim();
-  const poke = allPokemons.find(p => p.name.toLowerCase() === name.toLowerCase());
+  // Форматы:
+  //   "Pikachu#p1712345678"  — конкретный (имя + ID)
+  //   "p1712345678"          — конкретный (только ID)
+  //   "Pikachu"              — любой непойманный с таким именем
+  const raw = decodedText.trim();
+  let name = '';
+  let pokeId = '';
+
+  if (raw.includes('#')) {
+    const parts = raw.split('#');
+    name = parts[0].trim();
+    pokeId = (parts[1] || '').trim();
+  } else if (/^p\d+$/.test(raw)) {
+    pokeId = raw;
+  } else {
+    name = raw;
+  }
+
+  let poke;
+  if (pokeId) {
+    poke = allPokemons.find(p => p.id === pokeId);
+  }
+  if (!poke && name) {
+    poke = allPokemons.find(p =>
+      p.name.toLowerCase() === name.toLowerCase() &&
+      !currentUser.caught.includes(p.id)
+    );
+  }
 
   if (!poke) {
-    alert('✗ НЕ НАЙДЕН НА КАРТЕ: ' + name);
+    alert('✗ НЕ НАЙДЕН НА КАРТЕ: ' + (name || pokeId));
     return;
   }
 
   if (currentUser.caught.includes(poke.id)) {
-    alert(`У ТЕБЯ УЖЕ ЕСТЬ ${poke.name.toUpperCase()}!`);
+    alert(`У ТЕБЯ УЖЕ ЕСТЬ ЭТОТ ${poke.name.toUpperCase()}!`);
     closeScanner();
     return;
   }
 
   const stats = generateStats();
-  const newPokemon = { name: poke.name, id: poke.id, stats };
+  const newPokemon = {
+    name: poke.name,
+    id: poke.id,
+    img: poke.img,
+    stats,
+    shiny: stats.shiny,
+    caughtAt: Date.now()
+  };
 
   currentUser.collection.push(newPokemon);
   currentUser.caught.push(poke.id);
@@ -1122,7 +1204,13 @@ async function onScanSuccess(decodedText) {
 
   closeScanner();
 
-  showCatchAnimation(poke, () => {
+  const catchPoke = {
+    name: poke.name,
+    img: stats.shiny ? getSpriteUrl(poke.name, true) : poke.img,
+    shiny: stats.shiny
+  };
+
+  showCatchAnimation(catchPoke, () => {
     updateHeader();
     renderPokemons();
   });
@@ -1138,9 +1226,13 @@ function showCatchAnimation(poke, onDone) {
   const subtitle = document.getElementById('catchSubtitle');
 
   sprite.src = poke.img;
-  title.textContent = `ПОЙМАН ${poke.name.toUpperCase()}!`;
-  subtitle.textContent = '+1 В КОЛЛЕКЦИЮ';
+  sprite.className = 'catch-sprite' + (poke.shiny ? ' shiny' : '');
 
+  title.textContent = `ПОЙМАН ${poke.name.toUpperCase()}!`;
+  subtitle.textContent = poke.shiny ? '✨ ШАЙНИ! ✨' : '+1 В КОЛЛЕКЦИЮ';
+  subtitle.className = 'catch-subtitle' + (poke.shiny ? ' shiny' : '');
+
+  // Сброс анимаций
   sprite.style.animation = 'none';
   title.style.animation = 'none';
   subtitle.style.animation = 'none';
@@ -1155,14 +1247,18 @@ function showCatchAnimation(poke, onDone) {
   setTimeout(() => launchFirework(overlay), 400);
   setTimeout(() => launchFirework(overlay), 700);
   setTimeout(() => launchFirework(overlay), 1000);
+  if (poke.shiny) {
+    setTimeout(() => launchFirework(overlay), 1300);
+    setTimeout(() => launchFirework(overlay), 1600);
+  }
 
-  setTimeout(() => { overlay.classList.add('fade-out'); }, 2200);
+  setTimeout(() => { overlay.classList.add('fade-out'); }, 2400);
 
   setTimeout(() => {
     overlay.classList.remove('active', 'fade-out');
     overlay.querySelectorAll('.firework-particle, .flash').forEach(el => el.remove());
     if (onDone) onDone();
-  }, 2700);
+  }, 2900);
 }
 
 function launchFirework(container) {
@@ -1244,8 +1340,9 @@ document.getElementById('savePoke').onclick = async () => {
     return;
   }
 
+  const newId = 'p' + Date.now();
   try {
-    await apiAddPokemon({ id: 'p' + Date.now(), name, img, lat, lng });
+    await apiAddPokemon({ id: newId, name, img, lat, lng });
     await renderPokemons();
     document.getElementById('addPokeModal').classList.remove('active');
     document.getElementById('pokeSelect').value = '';
@@ -1253,7 +1350,13 @@ document.getElementById('savePoke').onclick = async () => {
     document.getElementById('pokeImg').value = '';
     document.getElementById('pokeLat').value = '';
     document.getElementById('pokeLng').value = '';
-    alert(`${name.toUpperCase()} ДОБАВЛЕН!\n\nQR = "${name}"`);
+
+    const qrFull = `${name}#${newId}`;
+    alert(
+      `${name.toUpperCase()} ДОБАВЛЕН!\n\n` +
+      `QR: ${qrFull}\n\n` +
+      `Скопировать QR можно в разделе «Удалить».`
+    );
   } catch (e) {
     document.getElementById('pokeError').textContent = '✗ ' + e.message.toUpperCase();
   }
@@ -1276,19 +1379,33 @@ async function renderDeleteList() {
     return;
   }
 
-  list.innerHTML = allPokemons.map(p => `
+  list.innerHTML = allPokemons.map(p => {
+    const qr = `${p.name}#${p.id}`;
+    return `
     <div class="poke-item">
       <div class="poke-item-info">
         <img src="${p.img}" alt="${p.name}">
         <div>
           <b>${p.name.toUpperCase()}</b>
           <small>${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</small>
+          <span class="qr-copy" onclick="copyQR('${qr}', this)">QR: ${qr}</span>
         </div>
       </div>
       <button class="btn btn-danger" onclick="deletePokemon('${p.id}')" style="padding:8px 10px;font-size:0.6rem;">🗑</button>
     </div>
-  `).join('');
+    `;
+  }).join('');
 }
+
+window.copyQR = function(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    const old = el.textContent;
+    el.textContent = 'СКОПИРОВАНО!';
+    setTimeout(() => { el.textContent = old; }, 1200);
+  }).catch(() => {
+    prompt('Скопируйте QR вручную:', text);
+  });
+};
 
 window.deletePokemon = async function(id) {
   const poke = allPokemons.find(p => p.id === id);
@@ -1315,9 +1432,10 @@ document.getElementById('viewUsersBtn').onclick = async () => {
       <div id="ucol-${u.login}" style="display:none;margin-top:12px;">
         ${u.collection.length
           ? '<div class="collection-grid">' + u.collection.map(item => {
-              const img = getSpriteUrl(item.name);
+              const isShiny = !!item.shiny;
+              const img = isShiny ? getSpriteUrl(item.name, true) : (item.img || getSpriteUrl(item.name));
               const cp = item.stats?.cp?.value ?? 0;
-              return `<div class="poke-card"><img src="${img}"><div class="poke-name">${item.name.toUpperCase()}</div><div class="poke-cp">CP ${cp}</div></div>`;
+              return `<div class="poke-card ${isShiny ? 'shiny' : ''}"><img src="${img}"><div class="poke-name">${item.name.toUpperCase()}${isShiny ? ' ✨' : ''}</div><div class="poke-cp">CP ${cp}</div></div>`;
             }).join('') + '</div>'
           : '<span class="hint">ПУСТО</span>'}
       </div>
