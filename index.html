@@ -914,7 +914,6 @@ async function renderPokemons() {
     marker.bindPopup(`
       <img src="${p.img}" alt="${p.name}">
       <b>${p.name}</b><br>
-      <small>QR: ${p.name}#${p.id}</small>
     `);
     markers[p.id] = marker;
   }
@@ -1178,7 +1177,6 @@ async function onScanSuccess(decodedText) {
   }
 
   if (currentUser.caught.includes(poke.id)) {
-    alert(`У ТЕБЯ УЖЕ ЕСТЬ ЭТОТ ${poke.name.toUpperCase()}!`);
     closeScanner();
     return;
   }
