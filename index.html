@@ -332,6 +332,15 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
+  /* Стиль маркера-вопроса для обычных игроков */
+  .poke-marker.question {
+    border-color: var(--blue);
+    box-shadow: 3px 3px 0 var(--blue);
+    color: var(--blue);
+    font-size: 1.6rem;
+    font-family: 'Press Start 2P', monospace;
+    text-shadow: 2px 2px 0 var(--pink);
+  }
 
   .leaflet-popup-content-wrapper {
     background: var(--black) !important;
@@ -572,6 +581,36 @@
     to { transform: scale(1.5); opacity: 0; }
   }
 
+  /* Всплывающее уведомление (заменяет alert) */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 40px;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--black);
+    color: var(--white);
+    padding: 16px 24px;
+    border: 3px solid var(--green);
+    box-shadow: 6px 6px 0 var(--green);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    z-index: 5000;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    max-width: 90vw;
+    text-align: center;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast.pink {
+    border-color: var(--pink);
+    box-shadow: 6px 6px 0 var(--pink);
+  }
+
   /* Загрузка */
   #loading {
     position: fixed; inset: 0;
@@ -731,6 +770,9 @@
   </div>
 </div>
 
+<!-- Тост -->
+<div id="toast"></div>
+
 <!-- Музыка -->
 <audio id="bgMusic" loop preload="auto" src="1-04. Aspertia City.mp3"></audio>
 
@@ -739,7 +781,7 @@
    ⚙️ НАСТРОЙКИ SUPABASE
    ========================================================= */
 const SUPABASE_URL = 'https://oxumlqamfzdhcrgjoquw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtZnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW1scWFtFnpkaGNyZ2pvcXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNjU5MTYsImV4cCI6MjEwNjg0MTkxNn0.5U1Ztczaof96aWeXdJpm__Geai3dDDy5hiiHw2FFdqY';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -874,12 +916,32 @@ async function apiGetUsers() {
 }
 
 function normalizeUser(u) {
+  let collection = u.collection;
+  let caught = u.caught;
+  if (typeof collection === 'string') {
+    try { collection = JSON.parse(collection); } catch { collection = []; }
+  }
+  if (typeof caught === 'string') {
+    try { caught = JSON.parse(caught); } catch { caught = []; }
+  }
   return {
     login: u.login,
     isAdmin: !!u.is_admin,
-    collection: u.collection || [],
-    caught: u.caught || []
+    collection: Array.isArray(collection) ? collection : [],
+    caught: Array.isArray(caught) ? caught : []
   };
+}
+
+/* =========================================================
+   ВСПЛЫВАШКА
+   ========================================================= */
+let toastTimer = null;
+function showToast(text, type = 'good') {
+  const toast = document.getElementById('toast');
+  toast.textContent = text;
+  toast.className = 'show ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.className = ''; }, 2500);
 }
 
 /* =========================================================
@@ -900,21 +962,47 @@ async function renderPokemons() {
   for (const k in markers) delete markers[k];
 
   const caughtIds = currentUser?.caught || [];
+  const isAdmin = !!currentUser?.isAdmin;
 
   for (const p of allPokemons) {
     if (caughtIds.includes(p.id)) continue;
 
-    const icon = L.divIcon({
-      html: `<div class="poke-marker"><img src="${p.img}" alt="${p.name}"></div>`,
-      className: '',
-      iconSize: [52, 52],
-      iconAnchor: [26, 26]
-    });
+    let icon;
+    if (isAdmin) {
+      // Админ видит спрайт покемона
+      icon = L.divIcon({
+        html: `<div class="poke-marker"><img src="${p.img}" alt="${p.name}"></div>`,
+        className: '',
+        iconSize: [52, 52],
+        iconAnchor: [26, 26]
+      });
+    } else {
+      // Игроки видят "?"
+      icon = L.divIcon({
+        html: `<div class="poke-marker question">?</div>`,
+        className: '',
+        iconSize: [52, 52],
+        iconAnchor: [26, 26]
+      });
+    }
+
     const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
-    marker.bindPopup(`
-      <img src="${p.img}" alt="${p.name}">
-      <b>${p.name}</b><br>
-    `);
+
+    if (isAdmin) {
+      // Админ видит имя и QR
+      marker.bindPopup(`
+        <img src="${p.img}" alt="${p.name}">
+        <b>${p.name}</b><br>
+        <small>QR: ${p.name}#${p.id}</small>
+      `);
+    } else {
+      // Игроки не видят, что это за покемон
+      marker.bindPopup(`
+        <b>???</b><br>
+        <small>ПОЙМАЙ, ЧТОБЫ УЗНАТЬ</small>
+      `);
+    }
+
     markers[p.id] = marker;
   }
 }
@@ -1142,10 +1230,6 @@ function closeScanner() {
 document.getElementById('closeScanner').onclick = closeScanner;
 
 async function onScanSuccess(decodedText) {
-  // Форматы:
-  //   "Pikachu#p1712345678"  — конкретный (имя + ID)
-  //   "p1712345678"          — конкретный (только ID)
-  //   "Pikachu"              — любой непойманный с таким именем
   const raw = decodedText.trim();
   let name = '';
   let pokeId = '';
@@ -1172,11 +1256,13 @@ async function onScanSuccess(decodedText) {
   }
 
   if (!poke) {
-    alert('✗ НЕ НАЙДЕН НА КАРТЕ: ' + (name || pokeId));
+    closeScanner();
+    showToast('✗ НЕ НАЙДЕН: ' + (name || pokeId), 'pink');
     return;
   }
 
   if (currentUser.caught.includes(poke.id)) {
+    // Уже пойман — тихо закрываем
     closeScanner();
     return;
   }
@@ -1230,7 +1316,6 @@ function showCatchAnimation(poke, onDone) {
   subtitle.textContent = poke.shiny ? '✨ ШАЙНИ! ✨' : '+1 В КОЛЛЕКЦИЮ';
   subtitle.className = 'catch-subtitle' + (poke.shiny ? ' shiny' : '');
 
-  // Сброс анимаций
   sprite.style.animation = 'none';
   title.style.animation = 'none';
   subtitle.style.animation = 'none';
@@ -1350,11 +1435,7 @@ document.getElementById('savePoke').onclick = async () => {
     document.getElementById('pokeLng').value = '';
 
     const qrFull = `${name}#${newId}`;
-    alert(
-      `${name.toUpperCase()} ДОБАВЛЕН!\n\n` +
-      `QR: ${qrFull}\n\n` +
-      `Скопировать QR можно в разделе «Удалить».`
-    );
+    showToast(`✔ ${name.toUpperCase()} ДОБАВЛЕН | QR: ${qrFull}`, 'good');
   } catch (e) {
     document.getElementById('pokeError').textContent = '✗ ' + e.message.toUpperCase();
   }
@@ -1413,7 +1494,7 @@ window.deletePokemon = async function(id) {
   await apiDeletePokemon(id);
   await renderPokemons();
   await renderDeleteList();
-  alert(`🗑 ${poke.name.toUpperCase()} УДАЛЁН`);
+  showToast(`🗑 ${poke.name.toUpperCase()} УДАЛЁН`, 'pink');
 };
 
 /* =========================================================
